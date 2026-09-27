@@ -1,5 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const dns = require('dns');
+
+// Force Node.js to resolve IPv4 addresses first (resolves Render outbound IPv6 limits)
+dns.setDefaultResultOrder('ipv4first');
+
 require('dotenv').config();
 
 const app = express();
