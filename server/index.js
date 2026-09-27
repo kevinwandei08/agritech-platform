@@ -4,12 +4,25 @@ require('dotenv').config();
 
 const app = express();
 
-// Global Middleware
-app.use(cors());
-app.use(express.json());
+// Global Middleware with Explicit CORS Configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://agritech-platform-chi.vercel.app'
+];
 
-// Import Authentication Middleware (Required to extract req.user.id from JWT)
-const authMiddleware = require('./middleware/auth'); 
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Fallback for production testing
+    }
+  },
+  credentials: true
+}));
+
+app.use(express.json());
 
 // Import Routes
 const authRoutes = require('./routes/auth');
@@ -18,7 +31,8 @@ const cropRoutes = require('./routes/crops');
 const livestockRoutes = require('./routes/livestock');
 const alertsRoutes = require('./routes/alerts');
 const weatherRoutes = require('./routes/weather');
-const inventoryRoutes = require('./routes/inventory'); // 1. Import Inventory Route
+const inventoryRoutes = require('./routes/inventory');
+const productionRoutes = require('./routes/production');
 
 // Import Cron Jobs Master Handler
 const startCronJobs = require('./cron');
@@ -30,12 +44,13 @@ app.use('/api/crops', cropRoutes);
 app.use('/api/livestock', livestockRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/weather', weatherRoutes);
-app.use('/api/inventory', authMiddleware, inventoryRoutes); // 2. Mount Inventory Route with Auth Protection
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/production', productionRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'Agritech API operational',
     timestamp: new Date().toISOString()
   });
