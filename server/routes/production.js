@@ -3,24 +3,36 @@ const router = express.Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
 
-// GET /api/production - Fetch yield logs for chart analytics
+// GET /api/production - Fetch yield logs for chart analytics (Filtered by entity_type and entity_id)
 router.get('/', auth, async (req, res) => {
+  const { entity_type, entity_id } = req.query;
+
   try {
-    const { rows } = await db.query(
-      `SELECT 
-         id, 
-         TO_CHAR(log_date, 'YYYY-MM-DD') AS date, 
-         entity_type, 
-         entity_id, 
-         quantity::FLOAT, 
-         unit, 
-         notes 
-       FROM production_logs 
-       WHERE user_id = $1 
-       ORDER BY log_date ASC`,
-      [req.user.id]
-    );
-    res.json({ success: true, logs: rows });
+    let query = `
+      SELECT id, TO_CHAR(log_date, 'YYYY-MM-DD') AS date, entity_type, entity_id, quantity::FLOAT, unit, notes 
+      FROM production_logs 
+      WHERE user_id = $1
+    `;
+    let params = [req.user.id];
+
+    // Filter by entity_type ('crop' or 'livestock')
+    if (entity_type) {
+      params.push(entity_type);
+      query += ` AND entity_type = $${params.length}`;
+    }
+
+    // Filter by specific animal or crop block ID (e.g., Bessie's ID)
+    if (entity_id) {
+      params.push(parseInt(entity_id));
+      query += ` AND entity_id = $${params.length}`;
+    }
+
+    query += ` ORDER BY log_date ASC`;
+
+    const { rows } = await db.query(query, params);
+
+    // Return both formats to prevent frontend structure breaking
+    res.json({ success: true, logs: rows, data: rows });
   } catch (err) {
     console.error('Error fetching production logs:', err.message);
     res.status(500).json({ error: 'Failed to fetch production data' });
@@ -31,7 +43,7 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   const { log_date, entity_type, entity_id, quantity, unit, notes } = req.body;
 
-  if (!entity_type || !quantity) {
+  if (!entity_type || quantity === undefined) {
     return res.status(400).json({ error: 'Entity type and quantity are required.' });
   }
 
@@ -42,7 +54,7 @@ router.post('/', auth, async (req, res) => {
        RETURNING id, TO_CHAR(log_date, 'YYYY-MM-DD') AS date, entity_type, entity_id, quantity::FLOAT, unit, notes`,
       [
         req.user.id,
-        entity_type,
+        entity_type, // 'crop' or 'livestock'
         parseInt(entity_id) || 0,
         parseFloat(quantity),
         unit || 'kg',
@@ -50,6 +62,7 @@ router.post('/', auth, async (req, res) => {
         notes || ''
       ]
     );
+
     res.status(201).json({ success: true, log: rows[0] });
   } catch (err) {
     console.error('Error adding production log:', err.message);

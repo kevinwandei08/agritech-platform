@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const pool = require('../db');
-//const pool = require('../config/db'); // Your PostgreSQL pool config
+const auth = require('../middleware/auth');
 
 // GET /api/inventory - Fetch all user inventory items
-router.get('/', async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const { rows } = await pool.query(
@@ -18,9 +18,13 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/inventory - Add new inventory item
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
   const { item_name, category, quantity, unit, reorder_level } = req.body;
   const userId = req.user.id;
+
+  if (!item_name || !category || quantity === undefined || !unit) {
+    return res.status(400).json({ error: 'Item name, category, quantity, and unit are required.' });
+  }
 
   try {
     const query = `
@@ -39,7 +43,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/inventory/:id - Update item quantity / reorder level
-router.put('/:id', async (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
   const { quantity, reorder_level } = req.body;
   const userId = req.user.id;
