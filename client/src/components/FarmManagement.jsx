@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sprout, Milk, Plus, Calendar, Activity, TrendingUp, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Sprout, Milk, Plus, Calendar, Activity, TrendingUp, CheckCircle, X } from 'lucide-react';
 import ProductionTracker from './ProductionTracker';
 import YieldAnalytics from './YieldAnalytics';
 import API from '../api';
@@ -9,7 +9,7 @@ export default function FarmManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Pre-populated initial records for Coffee, Tea, and Dairy
+  // Initial records for Coffee, Tea, and Dairy
   const [crops, setCrops] = useState([
     {
       id: 1,
@@ -64,7 +64,7 @@ export default function FarmManagement() {
     }
   ]);
 
-  // Track the active asset for the analytics graph and CSV export engine
+  // Track the active asset for top analytics graph & CSV export engine
   const [selectedAsset, setSelectedAsset] = useState({
     type: 'crop',
     id: 1,
@@ -75,7 +75,7 @@ export default function FarmManagement() {
   const [cropForm, setCropForm] = useState({ name: '', type: 'Coffee', variety: '', plantingDate: '', acreage: '', stage: 'Planting' });
   const [livestockForm, setLivestockForm] = useState({ tag: '', name: '', breed: 'Friesian', dob: '', dailyYieldLiters: '', stage: 'Lactation' });
 
-  // Attempt to fetch from backend API, fallback to default state
+  // Fetch backend records, fallback to initial state
   useEffect(() => {
     const loadFarmData = async () => {
       setLoading(true);
@@ -92,7 +92,7 @@ export default function FarmManagement() {
           setLivestock(livestockRes.value.data.livestock);
         }
       } catch (err) {
-        console.log('Using offline mock data for crops/livestock');
+        console.log('Using offline data for crops/livestock');
       } finally {
         setLoading(false);
       }
@@ -185,7 +185,7 @@ export default function FarmManagement() {
         entityName={selectedAsset.name}
       />
 
-      {/* --- SUBTAB 1: CROPS MANAGEMENT --- */}
+      {/* CROPS SUBTAB */}
       {activeSubTab === 'crops' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {crops.map((crop) => (
@@ -211,7 +211,6 @@ export default function FarmManagement() {
                   </div>
                 </div>
 
-                {/* Lifecycle Stage Progress Bar */}
                 <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-700/60">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400 flex items-center gap-1">
@@ -245,16 +244,21 @@ export default function FarmManagement() {
                 </div>
               </div>
 
-              {/* Embedded Production Log Input */}
+              {/* Embedded Production Log Input with isolated props */}
               <div className="mt-2 pt-3 border-t border-slate-700/80">
-                <ProductionTracker entityType="crop" entityId={crop.id} entityName={crop.name} unit="Kg" />
+                <ProductionTracker 
+                  entityType="crop" 
+                  entityId={crop.id} 
+                  entityName={crop.name} 
+                  unit="kg" 
+                />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* --- SUBTAB 2: LIVESTOCK MANAGEMENT --- */}
+      {/* LIVESTOCK SUBTAB */}
       {activeSubTab === 'livestock' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {livestock.map((cow) => (
@@ -280,7 +284,6 @@ export default function FarmManagement() {
                   </div>
                 </div>
 
-                {/* Status & Reproductive Stage */}
                 <div className="grid grid-cols-2 gap-3 bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 text-xs">
                   <div>
                     <span className="text-slate-500 block text-[10px] uppercase">Reproductive Stage</span>
@@ -294,22 +297,28 @@ export default function FarmManagement() {
 
                 <div className="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-700/60">
                   <span className="flex items-center gap-1.5">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />Health: <strong className="text-slate-200">{cow.healthStatus}</strong>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    Health: <strong className="text-slate-200">{cow.healthStatus}</strong>
                   </span>
                   <span>Vaccinated: <strong className="text-slate-300">{cow.lastVaccinated}</strong></span>
                 </div>
               </div>
 
-              {/* Embedded Production Log Input */}
+              {/* Embedded Production Log Input with isolated props */}
               <div className="mt-2 pt-3 border-t border-slate-700/80">
-                <ProductionTracker entityType="livestock" entityId={cow.id} entityName={cow.name || cow.tag} unit="Liters" />
+                <ProductionTracker 
+                  entityType="livestock" 
+                  entityId={cow.id} 
+                  entityName={cow.name || cow.tag} 
+                  unit="Liters" 
+                />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* --- ADD ASSET MODAL --- */}
+      {/* ADD ASSET MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative space-y-4">
@@ -320,7 +329,8 @@ export default function FarmManagement() {
               <X className="w-5 h-5" />
             </button>
             <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              {activeSubTab === 'crops' ? <Sprout className="text-emerald-400" /> : <Milk className="text-indigo-400" />}Add New {activeSubTab === 'crops' ? 'Crop Block' : 'Dairy Cattle'}
+              {activeSubTab === 'crops' ? <Sprout className="text-emerald-400" /> : <Milk className="text-indigo-400" />}
+              Add New {activeSubTab === 'crops' ? 'Crop Block' : 'Dairy Cattle'}
             </h3>
 
             {activeSubTab === 'crops' ? (

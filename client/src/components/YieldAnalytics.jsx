@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, TrendingUp, Calendar, Filter } from 'lucide-react';
+import { Download, TrendingUp } from 'lucide-react';
 import API from '../api';
 
 export default function YieldAnalytics({ entityType = 'crop', entityId = 1, entityName = '' }) {
@@ -14,14 +14,19 @@ export default function YieldAnalytics({ entityType = 'crop', entityId = 1, enti
       setLoading(true);
       try {
         const res = await API.get('/yield-analytics', {
-          params: { entityType, entityId, timeframe }
+          params: { 
+            entity_type: entityType, 
+            entity_id: entityId, 
+            timeframe 
+          }
         });
         if (res.data?.success && res.data?.analytics) {
           setAnalyticsData(res.data.analytics);
+        } else if (Array.isArray(res.data)) {
+          setAnalyticsData(res.data);
         }
       } catch (err) {
         console.log('Falling back to local cache or empty state for analytics');
-        // Fallback placeholder data for UI preview
         setAnalyticsData([
           { date: '2026-09-01', total_yield: 45 },
           { date: '2026-09-05', total_yield: 52 },
@@ -35,30 +40,27 @@ export default function YieldAnalytics({ entityType = 'crop', entityId = 1, enti
     fetchAnalytics();
   }, [entityType, entityId, timeframe]);
 
-  // Dynamic unit resolution
+  // Dynamic unit resolution based on entity type
   const unit = entityType === 'crop' ? 'Kg' : 'Liters';
 
   // Calculate summary metrics
-  const totalYield = analyticsData.reduce((acc, curr) => acc + Number(curr.total_yield || 0), 0);
+  const totalYield = analyticsData.reduce((acc, curr) => acc + Number(curr.total_yield || curr.quantity || 0), 0);
   const avgYield = analyticsData.length > 0 ? (totalYield / analyticsData.length).toFixed(1) : 0;
 
-  // STEP 2 ENGINE: Export CSV Functionality
+  // Export CSV Functionality
   const handleExportCSV = () => {
     if (!analyticsData || analyticsData.length === 0) {
       alert('No record history available to export.');
       return;
     }
 
-    // Define CSV Headers & Rows
     const headers = ['Date', 'Asset Name', 'Asset Type', `Yield Amount (${unit})`].join(',');
-    const rows = analyticsData.map((row) => 
-      `"${row.date}","${entityName.replace(/"/g, '""')}","${entityType}",${row.total_yield}`
+    const rows = analyticsData.map((row) =>
+      `"${row.date || row.log_date}","${entityName.replace(/"/g, '""')}","${entityType}",${row.total_yield || row.quantity}`
     );
-
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
-    
-    // Create hidden DOM element to trigger download
+
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     link.setAttribute('download', `${entityName.toLowerCase().replace(/\s+/g, '_')}_yield_${timeframe}.csv`);
@@ -75,9 +77,7 @@ export default function YieldAnalytics({ entityType = 'crop', entityId = 1, enti
             <TrendingUp className="w-5 h-5 text-emerald-400" />
             Yield Analytics & Reporting: <span className="text-emerald-400 font-semibold">{entityName || 'Selected Asset'}</span>
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Aggregated yield production history for the selected timeframe.
-          </p>
+          <p className="text-xs text-slate-400 mt-0.5">Aggregated yield production history for the selected timeframe.</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -113,12 +113,16 @@ export default function YieldAnalytics({ entityType = 'crop', entityId = 1, enti
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
         <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60">
           <span className="text-slate-400 uppercase text-[10px] font-bold block mb-1">Total Yield</span>
-          <span className="text-xl font-extrabold text-slate-100">{totalYield.toLocaleString()} {unit}</span>
+          <span className="text-xl font-extrabold text-slate-100">
+            {loading ? '...' : `${totalYield.toLocaleString()} ${unit}`}
+          </span>
         </div>
 
         <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60">
           <span className="text-slate-400 uppercase text-[10px] font-bold block mb-1">Daily Average</span>
-          <span className="text-xl font-extrabold text-emerald-400">{avgYield} {unit}</span>
+          <span className="text-xl font-extrabold text-emerald-400">
+            {loading ? '...' : `${avgYield} ${unit}`}
+          </span>
         </div>
 
         <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 col-span-2 sm:col-span-1">
