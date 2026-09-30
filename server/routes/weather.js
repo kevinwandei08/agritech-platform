@@ -36,10 +36,11 @@ function generateAgriInsights(temperature, precipitation, windspeed) {
   return insights;
 }
 
-// GET /api/weather/current - Real-time weather & agronomic advice
-router.get('/current', auth, async (req, res) => {
-  // Default to Kilifi / Coastal coordinates (-3.35, 40.02) if lat/lng are omitted
-  const { lat = -3.35, lng = 40.02 } = req.query;
+// Handler for weather data
+const handleWeatherRequest = async (req, res) => {
+  // Support lat/lng, lat/lon, and default to Watamu/Kilifi (-3.35, 40.02)
+  const lat = req.query.lat || -3.35;
+  const lng = req.query.lng || req.query.lon || 40.02;
 
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&hourly=precipitation,relativehumidity_2m`;
@@ -75,6 +76,10 @@ router.get('/current', auth, async (req, res) => {
     console.error('Weather API error:', err.message);
     res.status(500).json({ error: 'Server error fetching weather data' });
   }
-});
+};
+
+// Route handlers for both GET / and GET /current
+router.get('/', auth, handleWeatherRequest);
+router.get('/current', auth, handleWeatherRequest);
 
 module.exports = router;
